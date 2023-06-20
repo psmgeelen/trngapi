@@ -25,6 +25,7 @@ jobs:
           sudo make -f Makefile.linux
           sudo make -f Makefile.linux install
           cd ../../trng-api/
+          ls
       - name: Install dependencies Poetry
         run: poetry install --no-root
       - name: Run test
