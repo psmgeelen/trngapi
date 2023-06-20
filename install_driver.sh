@@ -8,4 +8,4 @@ sudo apt-key add 13-37.org-code.asc
 echo "deb http://repo.13-37.org/ stable main" | sudo tee /etc/apt/sources.list.d/infnoise.list
 sudo apt update
 rm 13-37.org-code.asc
-sudo apt install infnoise
+sudo apt install libftdi-dev libusb-dev infnoise
