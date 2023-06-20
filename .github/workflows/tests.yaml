@@ -18,6 +18,7 @@ jobs:
       - name: Install drivers
         run: |
           sudo apt update
+          sudo apt install wget make  libftdi-dev libusb-dev -y
           git clone https://github.com/13-37-org/infnoise
           cd infnoise/software
           git checkout tags/0.3.3
