@@ -24,9 +24,11 @@ jobs:
           git checkout tags/0.3.3
           sudo make -f Makefile.linux
           sudo make -f Makefile.linux install
-          cd ../../trng-api/
-          ls
       - name: Install dependencies Poetry
-        run: poetry install --no-root
+        run: | 
+          cd trng-api/
+          poetry install --no-root
       - name: Run test
-        run: poetry run pytest .
+        run: |
+          cd trng-api/
+          poetry run pytest .
