@@ -22,8 +22,8 @@ jobs:
           git clone https://github.com/13-37-org/infnoise
           cd infnoise/software
           git checkout tags/0.3.3
-          make -f Makefile.linux
-          make -f Makefile.linux install
+          sudo make -f Makefile.linux
+          sudo make -f Makefile.linux install
           cd ../trng-api/
       - name: Install dependencies Poetry
         run: poetry install --no-root
