@@ -57,7 +57,7 @@ class Handler(object):
             n_bits = np.finfo(dtype_object).bits
             return n_bits
         except Exception as e:
-            self.logger.warning(f"Couldnt detect float: {e}, trying integers now")
+            self.logger.warning(f"Couldn't detect float: {e}, trying integers now")
             try:
                 n_bits = np.iinfo(dtype_object).bits
                 return n_bits
