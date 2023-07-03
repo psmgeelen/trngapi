@@ -119,8 +119,6 @@ def get_random_hex(length: int = Form(...)) -> trng.randomPayload:
 def _healthcheck_ping():
     hostname = "google.com"  # example
     response = os.system("ping -c 1 " + hostname)
-    print(response)
-
     # and then check the response...
     if response == 0:
         return str(response)
