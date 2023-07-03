@@ -97,7 +97,7 @@ def get_random_nrs(dtype: str = Form(...), n_numbers: int = Form(...)) -> trng.r
     "/get_random_hex",
     summary="Get a random hex of desired length",
     description=(
-        "This request returns a truly random hex to specified length"
+        "This request returns a truly random hex to a specified length"
     ),
     response_description="A dictionary with Random Hex and some meta-data",
     response_model=trng.randomPayload,
