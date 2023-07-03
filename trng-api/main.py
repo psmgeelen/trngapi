@@ -73,7 +73,7 @@ def list_devices():
     "/get_random_nrs",
     summary="Get a list truly random numbers",
     description=(
-        'This request returns a list of random-numbers, formatted with numpy. The supported format are: "byte", '
+        'This request returns a list of random-numbers, formatted with numpy. The supported formats are: "byte", '
         '"ubyte", "short", "ushort", "intc", "uintc", "int_", "uint", "longlong", "ulonglong", "half", "float16", '
         '"single", "double", for more information, please check out: '
         'https://numpy.org/doc/stable/user/basics.types.html'
