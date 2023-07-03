@@ -26,7 +26,7 @@ class Handler(object):
         # When dtype doesnt exists, return message
         else:
             self.logger.error(f"Failed to recognize datatype: {dtype}")
-            numbers = ["Couldnt find dtype: please check out https://numpy.org/doc/stable/user/basics.types.html for "
+            numbers = ["Couldn't find dtype: please check out https://numpy.org/doc/stable/user/basics.types.html for "
                        "more information."]
             actual_length = 0
 
