@@ -151,7 +151,7 @@ def _healthcheck_list_devices():
         list_devices()
         response = True
     except Exception as e:
-        logger.error("Healthcheck failed listing devices")
+        logger.error("Healthcheck failed at listing devices")
     finally:
         return response
 
