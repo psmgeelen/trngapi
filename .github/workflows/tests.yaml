@@ -4,10 +4,6 @@ on:
   - pull_request
   - workflow_dispatch
 
-defaults:
-  run:
-    working-directory: api
-
 jobs:
  build:
    runs-on: ubuntu-latest
@@ -17,17 +13,22 @@ jobs:
         run: pipx install poetry
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'poetry'
       - name: Install drivers
         run: |
           sudo apt update
-          sudo apt install gpg -y
-          echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
-          curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-          sudo apt-get update
-          sudo apt-get install libedgetpu1-std -y
+          sudo apt install wget make  libftdi-dev libusb-dev -y
+          git clone https://github.com/13-37-org/infnoise
+          cd infnoise/software
+          git checkout tags/0.3.3
+          sudo make -f Makefile.linux
+          sudo make -f Makefile.linux install
       - name: Install dependencies Poetry
-        run: poetry install --no-root
+        run: | 
+          cd trng-api/
+          poetry install --no-root
       - name: Run test
-        run: poetry run pytest .
+        run: |
+          cd trng-api/
+          poetry run pytest .

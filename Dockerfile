@@ -4,19 +4,20 @@
 # See https://docs.docker.com/develop/develop-images/multistage-build/
 
 # Creating a python base with shared environment variables
-FROM python:3.9.17-slim-bullseye
+FROM python:3.11.4-bullseye
 SHELL ["/bin/bash", "-c"]
-RUN apt-get update
-RUN apt-get install gpg curl git -y
-# install google coral drivers
-RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main"| tee /etc/apt/sources.list.d/coral-edgetpu.list
-RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-RUN apt-get update
-RUN apt-get install libedgetpu1-std -y
 
-RUN mkdir /api_app
-WORKDIR /api_app
-COPY /api /api_app
+RUN apt update
+RUN apt install wget make  libftdi-dev libusb-dev -y
+RUN git clone https://github.com/13-37-org/infnoise
+WORKDIR infnoise/software
+RUN git checkout tags/0.3.3
+RUN make -f Makefile.linux
+RUN make -f Makefile.linux install
+WORKDIR /
+RUN mkdir /trng-api
+WORKDIR /trng-api
+COPY /trng-api /trng-api
 
 ENV PYTHONPATH=${PYTHONPATH}:${PWD}
 RUN pip3 install poetry
