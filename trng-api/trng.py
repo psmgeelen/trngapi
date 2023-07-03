@@ -70,7 +70,7 @@ class Handler(object):
             self.logger.info(f"Found device(s): {p.stdout}")
             device = Device()
         else:
-            self.logger.warning(f"Could find devices, loading emulator. Error: {p.stdout, p.stderr}")
+            self.logger.warning(f"Couldn't find devices, loading emulator. Error: {p.stdout, p.stderr}")
             device = DeviceEmulator()
         return device
 
