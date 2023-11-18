@@ -15,12 +15,29 @@ def test_list_devices():
     assert response.status_code == 200
     assert isinstance(response.json(), str)
 
+
 def test_get_random_nrs():
-    dtypes = ["byte", "ubyte", "short", "ushort", "intc", "uintc", "int_", "uint", "longlong", "ulonglong",
-              "half", "float16", "single", "double"]
+    dtypes = [
+        "byte",
+        "ubyte",
+        "short",
+        "ushort",
+        "intc",
+        "uintc",
+        "int_",
+        "uint",
+        "longlong",
+        "ulonglong",
+        "half",
+        "float16",
+        "single",
+        "double",
+    ]
     n_numbers = 10
     for dtype in dtypes:
-        response = client.post("/get_random_nrs", data={"dtype": dtype, "n_numbers": n_numbers})
+        response = client.post(
+            "/get_random_nrs", data={"dtype": dtype, "n_numbers": n_numbers}
+        )
         results = response.json()
         assert response.status_code == 200
         assert isinstance(results, dict)

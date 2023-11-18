@@ -1,6 +1,9 @@
 import os
-from fastapi import FastAPI, Form
+from fastapi import FastAPI, Form, Request
 from fastapi.openapi.utils import get_openapi
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from fastapi_health import health
 import logging
 import trng
@@ -16,8 +19,14 @@ logger.addHandler(stream_handler)
 # Init Handler
 # handler = trng.Handler()
 
+
+
 # Init API
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 
 def my_schema():
@@ -44,6 +53,7 @@ def my_schema():
 
 app.openapi = my_schema
 
+
 ##### Endpoints #####
 @app.get(
     "/ping",
@@ -65,7 +75,8 @@ def ping():
     response_description="A dictionary with a list of devices",
     response_model=str,
 )
-def list_devices():
+@limiter.limit("5/minute")
+def list_devices(request: Request):
     return trng.Handler().list_devices()
 
 
@@ -73,47 +84,53 @@ def list_devices():
     "/get_random_nrs",
     summary="Get a list truly random numbers",
     description=(
-        'This request returns a list of random-numbers, formatted with numpy. The supported formats are: "byte", '
-        '"ubyte", "short", "ushort", "intc", "uintc", "int_", "uint", "longlong", "ulonglong", "half", "float16", '
-        '"single", "double", for more information, please check out: '
-        'https://numpy.org/doc/stable/user/basics.types.html'
+        "This request returns a list of random-numbers, formatted with numpy. The"
+        ' supported formats are: "byte", "ubyte", "short", "ushort", "intc", "uintc",'
+        ' "int_", "uint", "longlong", "ulonglong", "half", "float16", "single",'
+        ' "double", for more information, please check out:'
+        " https://numpy.org/doc/stable/user/basics.types.html"
     ),
     response_description="A dictionary with Random Numbers and some meta-data",
     response_model=trng.randomPayload,
 )
-def get_random_nrs(dtype: str = Form(...), n_numbers: int = Form(...)) -> trng.randomPayload:
+@limiter.limit("5/minute")
+def get_random_nrs(request: Request,
+    dtype: str = Form(...), n_numbers: int = Form(...)
+) -> trng.randomPayload:
     if n_numbers <= 1000:
-        results = trng.Handler().get_numbers(dtype = dtype, n_numbers = n_numbers)
+        results = trng.Handler().get_numbers(dtype=dtype, n_numbers=n_numbers)
     else:
         results = trng.randomPayload(
             length=0,
-            actual_length = 0,
-            dtype = dtype,
-            data = ["Limited to 1000 items at a time"],
-            device = "error"
+            actual_length=0,
+            dtype=dtype,
+            data=["Limited to 1000 items at a time"],
+            device="error",
         )
     return results
+
+
 @app.post(
     "/get_random_hex",
     summary="Get a random hex of desired length",
-    description=(
-        "This request returns a truly random hex to a specified length"
-    ),
+    description="This request returns a truly random hex to a specified length",
     response_description="A dictionary with Random Hex and some meta-data",
     response_model=trng.randomPayload,
 )
-def get_random_hex(length: int = Form(...)) -> trng.randomPayload:
+@limiter.limit("5/minute")
+def get_random_hex(request: Request, length: int = Form(...)) -> trng.randomPayload:
     if length <= 10000:
-        results = trng.Handler().get_hex(length = length)
+        results = trng.Handler().get_hex(length=length)
     else:
         results = trng.randomPayload(
             length=0,
-            actual_length = 0,
-            dtype = "bytes",
-            data = ["Limited to length of 10000 at a time"],
-            device = "error"
+            actual_length=0,
+            dtype="bytes",
+            data=["Limited to length of 10000 at a time"],
+            device="error",
         )
     return results
+
 
 ##### Healthchecks #####
 def _healthcheck_ping():
@@ -124,25 +141,30 @@ def _healthcheck_ping():
         return str(response)
     else:
         return False
+
+
 def _healthcheck_get_random_nrs():
     response = False
     try:
-        get_random_nrs(dtype = 'int8', n_numbers = 10)
+        get_random_nrs(dtype="int8", n_numbers=10)
         response = True
     except Exception as e:
         logger.error("Healthcheck failed at getting nrs")
     finally:
         return response
 
+
 def _healthcheck_get_hex():
     response = False
     try:
-        get_random_hex(length = 10)
+        get_random_hex(length=10)
         response = True
     except Exception as e:
         logger.error("Healthcheck failed at getting hex")
     finally:
         return response
+
+
 def _healthcheck_list_devices():
     response = False
     try:
@@ -153,15 +175,23 @@ def _healthcheck_list_devices():
     finally:
         return response
 
+
 app.add_api_route(
     "/health",
-    health([_healthcheck_ping, _healthcheck_get_random_nrs, _healthcheck_get_hex, _healthcheck_list_devices]),
+    health(
+        [
+            _healthcheck_ping,
+            _healthcheck_get_random_nrs,
+            _healthcheck_get_hex,
+            _healthcheck_list_devices,
+        ]
+    ),
     summary="Check the health of the service",
     description=(
-        "The healthcheck not only checks whether the service is up, but it will also check"
-        " for internet connectivity, whether the hardware is callable and it does an"
-        " end-to-end test. The healthcheck therefore can become blocking by nature. Use"
-        " with caution!"
+        "The healthcheck not only checks whether the service is up, but it will also"
+        " check for internet connectivity, whether the hardware is callable and it does"
+        " an end-to-end test. The healthcheck therefore can become blocking by nature."
+        " Use with caution!"
     ),
     response_description=(
         "The response is only focused around the status. 200 is OK, anything else and"
