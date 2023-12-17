@@ -7,17 +7,9 @@
 FROM python:3.11.4-bullseye
 SHELL ["/bin/bash", "-c"]
 
-RUN apt update
-RUN apt install wget make  libftdi-dev libusb-dev -y
-RUN git clone https://github.com/13-37-org/infnoise
-WORKDIR infnoise/software
-RUN git checkout tags/0.3.3
-RUN make -f Makefile.linux
-RUN make -f Makefile.linux install
-WORKDIR /
 RUN mkdir /trng-api
 WORKDIR /trng-api
-COPY /trng-api /trng-api
+COPY . /trng-api
 
 ENV PYTHONPATH=${PYTHONPATH}:${PWD}
 RUN pip3 install poetry

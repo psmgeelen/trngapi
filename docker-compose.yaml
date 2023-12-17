@@ -1,10 +1,26 @@
+version: "3.9"
+
 services:
-  trng-api:
-    container_name: trng-api
-    build: .
+  api:
+    container_name: api
+    build: trng-api/api/
+    depends_on:
+      - duckdb
+      - trng
+  trng:
+    container_name: trng
+    build: trng-api/trng/
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
     privileged: true # required for gettings access to hardware adapters
-    network_mode: "host"
+  duckdb:
+    container_name: duckdb
+    image: davidgasquez/duckdb
+    depends_on:
+      - trng
+
+networks:
+  trng:
+    driver: "bridge"
