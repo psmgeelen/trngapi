@@ -5,7 +5,7 @@ services:
     container_name: api
     build: trng-api/api/
     depends_on:
-      - duckdb
+      - timescaledb
       - trng
   trng:
     container_name: trng
@@ -15,11 +15,21 @@ services:
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
     privileged: true # required for gettings access to hardware adapters
-  duckdb:
-    container_name: duckdb
-    image: davidgasquez/duckdb
     depends_on:
-      - trng
+      timescaledb:
+        condition: service_healthy
+  timescaledb:
+    container_name: timescaledb
+    image: timescale/timescaledb:latest-pg16
+    env_file:
+      - .env
+    environment:
+      - "POSTGRES_PASSWORD=password"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 networks:
   trng:

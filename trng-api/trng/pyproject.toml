@@ -9,6 +9,7 @@ packages = [{include = "trng_api"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+psycopg2-binary = "^2.9.9"
 
 [tool.poetry.dev-dependencies]
 ruff = "^0.0.272"
