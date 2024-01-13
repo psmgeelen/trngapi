@@ -34,6 +34,8 @@ if __name__ == "__main__":
     port = os.environ["DB_PORT"]
     database = os.environ["DB_NAME"]
 
+    print(os.environ)
+
     # connect to DB
     conn = psycopg2.connect(database=database,
                             host=host,

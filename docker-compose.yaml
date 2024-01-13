@@ -1,12 +1,12 @@
 version: "3.9"
 
 services:
-  api:
-    container_name: api
-    build: trng-api/api/
-    depends_on:
-      - timescaledb
-      - trng
+#  api:
+#    container_name: api
+#    build: trng-api/api/
+#    depends_on:
+#      - timescaledb
+#      - trng
   trng:
     container_name: trng
     build: trng-api/trng/
@@ -15,21 +15,25 @@ services:
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
     privileged: true # required for gettings access to hardware adapters
+    env_file:
+      - .env
     depends_on:
       timescaledb:
         condition: service_healthy
   timescaledb:
     container_name: timescaledb
     image: timescale/timescaledb:latest-pg16
-    env_file:
-      - .env
+#    env_file:
+#      - .env
     environment:
-      - "POSTGRES_PASSWORD=password"
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - "POSTGRES_PASSWORD=mysecretpassword"
+    ports:
+      - "5432:5432"
+#    healthcheck:
+#      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
 
 networks:
   trng:
