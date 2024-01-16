@@ -2,7 +2,24 @@ import logging
 import subprocess
 import os
 from datetime import datetime
-import psycopg2
+import pandas as pd
+from sqlalchemy import create_engine, Table, MetaData, Column, DateTime, LargeBinary
+from sqlalchemy import select, String, Integer, Identity
+from sqlalchemy.engine.url import URL
+from sqlalchemy.sql import text
+from sqlalchemy.dialects.postgresql import TIMESTAMP
+
+config = dict(
+    drivername='driver',
+    username='username',
+    password='qwerty1',
+    host='127.0.0.1',
+    port='5000',
+    database='mydb',
+    query={'encoding': 'utf-8'}
+)
+
+url = URL.create(**config)
 
 class GetBytes(object):
 
@@ -18,7 +35,7 @@ class GetBytes(object):
             bits += bytearray(p.stdout.readline(1024))
             if len(bits) > amount_of_bytes_needed:
                 stop = True
-        return bits
+        return bytes(bits)[0:amount_of_bytes_needed]
 
     @staticmethod
     def list_devices():
@@ -37,25 +54,63 @@ if __name__ == "__main__":
     print(os.environ)
 
     # connect to DB
-    conn = psycopg2.connect(database=database,
+    config = dict(database=database,
+                    drivername='timescaledb',
                             host=host,
-                            user=username,
+                            username=username,
                             password=password,
                             port=port)
-    cursor = conn.cursor()
-
-    # Init DB
-    cursor.execute("""CREATE TABLE IF NOT EXISTS public.random_bytes_inf (
-        time TIMESTAMPTZ NOT NULL,
-        random_bytes BYTEA,
-        PRIMARY KEY(time));""")
-    cursor.execute("""SELECT create_hypertable('public.random_bytes_inf', 'time');""")
-    # Write device name to DB
-
+    
+    url = URL.create(**config)
+    engine = create_engine(url, echo=True)
+    
+    metadata = MetaData()
+    metadata.bind = engine
+    
+    # Create Tables
+    random_bytes_inf = Table(
+        'random_bytes_inf', metadata,
+        Column("id", Integer, Identity()),
+        Column('random_bytes', LargeBinary),
+        Column('time', TIMESTAMP(timezone=True), default=datetime.now),
+        timescaledb_hypertable={
+            "time_column_name": "time",
+            "chunk_time_interval": "1 hour"
+        }
+    )
+    devices = Table(
+        'devices', metadata,
+        Column('device_name', String),
+        Column('time', TIMESTAMP(timezone=True))
+    )
+    
+    metadata.create_all(engine)
+    
+    conn = engine.connect()
+        
+    #Create delete procedure and job
+    with open('./migrations_job/delete_procedure.sql', 'r') as prod, open('./migrations_job/delete_job.sql', 'r') as job:
+        sql_commands = [prod.read(), job.read()]
+        
+        for command in sql_commands:
+            conn.execute(text(command))
+            conn.commit()
+        
+    iterations = 0
     while True:
+        now = datetime.now()
+        
         random_bytes = GetBytes._get_random_payload(amount_of_bytes_needed=128)
-        print(random_bytes)
-        now = datetime.datetime.now()
-        print(now)
-        insert_sql = psycopg2.sql.SQL("INSERT INTO public.random_bytes_inf (time, random_bytes) VALUES (%s, %s);")
-        cursor.execute(insert_sql, (now, random_bytes))
+    
+        # Insert new row
+        insert_bytes_sql = random_bytes_inf.insert().values({"time": now, "random_bytes": random_bytes})
+        conn.execute(insert_bytes_sql)
+        
+        # 180 ~ approximate 1 hour
+        if iterations % 180 == 0:
+            device_name = GetBytes.list_devices()
+            insert_device = devices.insert().values({"time": now, "device_name": str(device_name)})
+            conn.execute(insert_device)
+        
+        conn.commit()
+        iterations+=1
