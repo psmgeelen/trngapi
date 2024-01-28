@@ -68,8 +68,8 @@ if __name__ == "__main__":
     metadata.bind = engine
     
     # Create Tables
-    random_bytes_inf = Table(
-        'random_bytes_inf', metadata,
+    random_bytes_inf_large = Table(
+        'random_bytes_inf_large', metadata,
         Column("id", Integer, Identity()),
         Column('random_bytes', LargeBinary),
         Column('time', TIMESTAMP(timezone=True), default=datetime.now),
@@ -100,10 +100,10 @@ if __name__ == "__main__":
     while True:
         now = datetime.now()
         
-        random_bytes = GetBytes._get_random_payload(amount_of_bytes_needed=128)
+        random_bytes = GetBytes._get_random_payload(amount_of_bytes_needed=1024*1024)
     
         # Insert new row
-        insert_bytes_sql = random_bytes_inf.insert().values({"time": now, "random_bytes": random_bytes})
+        insert_bytes_sql = random_bytes_inf_large.insert().values({"time": now, "random_bytes": random_bytes})
         conn.execute(insert_bytes_sql)
         
         # 180 ~ approximate 1 hour
