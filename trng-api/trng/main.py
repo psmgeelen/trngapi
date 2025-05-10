@@ -8,6 +8,11 @@ from sqlalchemy import select, String, Integer, Identity
 from sqlalchemy.engine.url import URL
 from sqlalchemy.sql import text
 from sqlalchemy.dialects.postgresql import TIMESTAMP
+import time
+import traceback
+import sys
+
+logging.basicConfig(level=logging.INFO)
 
 config = dict(
     drivername='driver',
@@ -27,20 +32,37 @@ class GetBytes(object):
     def _get_random_payload(
         amount_of_bytes_needed: int,
     ) -> bytearray:
-        p = subprocess.Popen("infnoise", stdout=subprocess.PIPE)
-        # Get bytes
-        bits = bytearray()
-        stop = False
-        while not stop:
-            bits += bytearray(p.stdout.readline(1024))
-            if len(bits) > amount_of_bytes_needed:
-                stop = True
-        return bytes(bits)[0:amount_of_bytes_needed]
+        try:
+            p = subprocess.Popen("infnoise", stdout=subprocess.PIPE)
+            bits = bytearray()
+            stop = False
+            while not stop:
+                bits += bytearray(p.stdout.readline(1024))
+                if len(bits) > amount_of_bytes_needed:
+                    stop = True
+            return bytes(bits)[0:amount_of_bytes_needed]
+        except Exception as e:
+            logging.error(f"Error getting random payload: {e}")
+            traceback.print_exc()
+            return None
 
     @staticmethod
     def list_devices():
-        p = subprocess.run(["infnoise", "-l"], stdout=subprocess.PIPE)
-        return p.stdout
+        try:
+            p = subprocess.run(["infnoise", "-l"], stdout=subprocess.PIPE)
+            return p.stdout
+        except Exception as e:
+            logging.error(f"Error listing devices: {e}")
+            traceback.print_exc()
+            return None
+
+def write_health_status(ok: bool):
+    try:
+        with open("/tmp/health.ok", "w") as f:
+            f.write("OK" if ok else "FAIL")
+    except Exception as e:
+        logging.error(f"Unable to write health status: {e}")
+        traceback.print_exc()
 
 if __name__ == "__main__":
 
@@ -56,10 +78,10 @@ if __name__ == "__main__":
     # connect to DB
     config = dict(database=database,
                     drivername='timescaledb',
-                            host=host,
-                            username=username,
-                            password=password,
-                            port=port)
+                    host=host,
+                    username=username,
+                    password=password,
+                    port=port)
     
     url = URL.create(**config)
     engine = create_engine(url, echo=True)
@@ -89,28 +111,44 @@ if __name__ == "__main__":
     conn = engine.connect()
         
     #Create delete procedure and job
-    with open('./migrations_job/delete_procedure.sql', 'r') as prod, open('./migrations_job/delete_job.sql', 'r') as job:
-        sql_commands = [prod.read(), job.read()]
-        
-        for command in sql_commands:
-            conn.execute(text(command))
-            conn.commit()
-        
+    try:
+        with open('./migrations_job/delete_procedure.sql', 'r') as prod, open('./migrations_job/delete_job.sql', 'r') as job:
+            sql_commands = [prod.read(), job.read()]
+            for command in sql_commands:
+                conn.execute(text(command))
+                conn.commit()
+    except Exception as e:
+        logging.critical(f"Migration failed: {e}")
+        traceback.print_exc()
+        write_health_status(False)
+        sys.exit(1)
+
     iterations = 0
     while True:
-        now = datetime.now()
-        
-        random_bytes = GetBytes._get_random_payload(amount_of_bytes_needed=1024*1024)
-    
-        # Insert new row
-        insert_bytes_sql = random_bytes_inf_large.insert().values({"time": now, "random_bytes": random_bytes})
-        conn.execute(insert_bytes_sql)
-        
-        # 180 ~ approximate 1 hour
-        if iterations % 180 == 0:
-            device_name = GetBytes.list_devices()
-            insert_device = devices.insert().values({"time": now, "device_name": str(device_name)})
-            conn.execute(insert_device)
-        
-        conn.commit()
-        iterations+=1
+        try:
+            now = datetime.now()
+            
+            random_bytes = GetBytes._get_random_payload(amount_of_bytes_needed=1024*1024)
+            if random_bytes is None:
+                write_health_status(False)
+                time.sleep(10)
+                continue
+
+            insert_bytes_sql = random_bytes_inf.insert().values({"time": now, "random_bytes": random_bytes})
+            conn.execute(insert_bytes_sql)
+
+            if iterations % 180 == 0:
+                device_name = GetBytes.list_devices()
+                if device_name:
+                    insert_device = devices.insert().values({"time": now, "device_name": str(device_name)})
+                    conn.execute(insert_device)
+
+            conn.commit()
+            write_health_status(True)
+            iterations += 1
+            time.sleep(20)  # Prevent tight loop
+        except Exception as e:
+            logging.error(f"Loop error: {e}")
+            traceback.print_exc()
+            write_health_status(False)
+            time.sleep(10)

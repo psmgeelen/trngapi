@@ -14,7 +14,7 @@ pandas = "^2.1.4"
 sqlalchemy = "^2.0.25"
 sqlalchemy-timescaledb = "^0.4.1"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 ruff = "^0.0.272"
 black = "^23.3.0"
 
