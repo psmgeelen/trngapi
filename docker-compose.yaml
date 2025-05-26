@@ -27,6 +27,18 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --cleanup --enable-lifecycle-hooks --monitor-only
+    environment:
+      - WATCHTOWER_POLL_INTERVAL=30  # Check every 30 seconds
+      - WATCHTOWER_INCLUDE_RESTARTING=true
   timescaledb:
     container_name: timescaledb
     env_file:
@@ -42,8 +54,6 @@ services:
       - /mnt/timescaledb_large/docker_volume:/home/postgres/pgdata/data
     ports:
       - "5432:5432"
-    volumes:
-      - /home/idefix/projects/trngapi/db_data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
